@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ushuaia · The North Face × Taumaxs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#07090a;
+    --black-2:#0e1214;
+    --black-3:#15191b;
+    --red:#e63a23;
+    --red-dim:#e63a2333;
+    --ice:#6fa3c4;
+    --ice-dim:#6fa3c433;
+    --yellow:#f0b400;
+    --white:#f3f1ec;
+    --grey:#9aa0a0;
+    --line:#ffffff14;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--black);
+    color:var(--white);
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:400;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--red);color:var(--white);}
+  h1,h2,h3{font-family:'Anton', sans-serif; font-weight:400; text-transform:uppercase; letter-spacing:0.01em; margin:0;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+  img{display:block; max-width:100%;}
+  a{color:inherit;}
+
+  /* ---------- Latitude rail ---------- */
+  .rail{
+    position:fixed;
+    left:0; top:0; bottom:0;
+    width:64px;
+    z-index:60;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    padding:28px 0;
+    background:linear-gradient(180deg, #07090acc, #07090a99 60%, #07090acc);
+    border-right:1px solid var(--line);
+    backdrop-filter:blur(6px);
+  }
+  .rail-top{font-size:10px; letter-spacing:0.12em; color:var(--grey); text-align:center;}
+  .rail-track{
+    position:relative;
+    flex:1;
+    width:2px;
+    background:var(--line);
+    margin:18px 0;
+    border-radius:2px;
+  }
+  .rail-fill{
+    position:absolute;
+    left:0; top:0; width:100%;
+    background:linear-gradient(180deg, var(--ice), var(--red));
+    border-radius:2px;
+    height:0%;
+    transition:height .15s linear;
+  }
+  .rail-dot{
+    position:absolute;
+    left:50%; transform:translateX(-50%);
+    width:9px; height:9px;
+    border-radius:50%;
+    background:var(--black-3);
+    border:2px solid var(--grey);
+    cursor:pointer;
+    transition:.25s;
+  }
+  .rail-dot.active{
+    background:var(--red);
+    border-color:var(--red);
+    box-shadow:0 0 0 4px var(--red-dim);
+  }
+  .rail-coord{
+    font-size:11px;
+    color:var(--ice);
+    writing-mode:vertical-rl;
+    text-orientation:mixed;
+    letter-spacing:0.08em;
+  }
+  .rail-bottom{font-size:9px; color:var(--grey); text-align:center; line-height:1.4;}
+
+  /* mobile top bar */
+  .top-bar{
+    display:none;
+    position:fixed; top:0; left:0; right:0;
+    height:46px;
+    z-index:60;
+    background:#07090aee;
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+    align-items:center;
+    padding:0 16px;
+    gap:10px;
+  }
+  .top-bar-track{flex:1; height:2px; background:var(--line); position:relative; border-radius:2px;}
+  .top-bar-fill{position:absolute; left:0; top:0; height:100%; background:linear-gradient(90deg, var(--ice), var(--red)); width:0%; border-radius:2px;}
+  .top-bar-coord{font-size:11px; color:var(--ice); white-space:nowrap;}
+
+  main{margin-left:64px;}
+
+  .section{
+    position:relative;
+    min-height:100vh;
+    padding:120px 64px;
+    display:flex;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; width:100%; position:relative; z-index:2;}
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; letter-spacing:0.15em;
+    color:var(--red); text-transform:uppercase;
+    margin-bottom:18px;
+  }
+  .eyebrow::before{content:''; width:18px; height:1px; background:var(--red);}
+
+  .ghost-num{
+    position:absolute;
+    right:2vw; top:50%; transform:translateY(-50%);
+    font-family:'Anton', sans-serif;
+    font-size:min(38vw, 480px);
+    line-height:1;
+    color:transparent;
+    -webkit-text-stroke:1px #ffffff10;
+    z-index:0;
+    user-select:none;
+    pointer-events:none;
+  }
+
+  .reveal{opacity:0; transform:translateY(28px); transition:opacity .8s ease, transform .8s ease;}
+  .reveal.in{opacity:1; transform:translateY(0);}
+  .reveal-d1{transition-delay:.08s;}
+  .reveal-d2{transition-delay:.16s;}
+  .reveal-d3{transition-delay:.24s;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    padding:0;
+    background:#000;
+  }
+  .hero-bg{
+    position:absolute; inset:0;
+    background-size:cover; background-position:center 65%;
+    filter:brightness(.55) saturate(1.05);
+  }
+  .hero-gradient{
+    position:absolute; inset:0;
+    background:
+      linear-gradient(180deg, #07090a55 0%, #07090a22 35%, #07090aee 100%),
+      linear-gradient(90deg, #07090acc 0%, transparent 45%);
+  }
+  #snow{position:absolute; inset:0; z-index:1; pointer-events:none;}
+  .hero-content{
+    position:relative; z-index:3;
+    max-width:var(--maxw);
+    margin:0 auto;
+    padding:0 64px;
+    width:100%;
+  }
+  .hero-eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; letter-spacing:0.2em;
+    color:var(--ice);
+    margin-bottom:22px;
+  }
+  .hero h1{
+    font-size:min(16vw, 180px);
+    line-height:0.86;
+    color:var(--white);
+  }
+  .brand-row{
+    display:flex; align-items:center; gap:16px;
+    font-family:'Anton', sans-serif;
+    font-size:clamp(20px, 3vw, 34px);
+    margin-top:18px;
+    color:var(--white);
+    flex-wrap:wrap;
+  }
+  .brand-row .x{color:var(--red);}
+  .hero-meta{
+    margin-top:22px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    letter-spacing:0.1em;
+    color:var(--grey);
+  }
+  .scroll-cue{
+    position:absolute;
+    bottom:42px; left:64px;
+    display:flex; align-items:center; gap:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:0.15em;
+    color:var(--grey);
+    z-index:3;
+  }
+  .scroll-cue .arrow{
+    width:1px; height:34px; background:linear-gradient(180deg, var(--red), transparent);
+    animation:cuemove 1.8s infinite ease-in-out;
+  }
+  @keyframes cuemove{0%,100%{opacity:.3} 50%{opacity:1}}
+
+  /* ---------- Two col ---------- */
+  .two-col{
+    display:grid;
+    grid-template-columns:1.1fr 0.9fr;
+    gap:64px;
+    align-items:center;
+  }
+  .two-col.reverse{grid-template-columns:0.9fr 1.1fr;}
+  .two-col.reverse .img-cell{order:-1;}
+  .copy h2{font-size:clamp(40px,6vw,76px); margin-bottom:22px;}
+  .copy p{font-size:19px; line-height:1.6; color:#d8d6d0; max-width:520px;}
+  .copy p + p{margin-top:14px;}
+  .hl-red{color:var(--red); font-weight:600;}
+  .hl-ice{color:var(--ice); font-weight:600;}
+  .pull-quote{
+    margin-top:34px;
+    padding-left:18px;
+    border-left:2px solid var(--red);
+    font-family:'Anton', sans-serif;
+    font-size:clamp(18px,2.2vw,26px);
+    letter-spacing:0.02em;
+    color:var(--white);
+  }
+  .img-cell{position:relative;}
+  .img-frame{
+    position:relative;
+    overflow:hidden;
+    border-radius:2px;
+    border:1px solid var(--line);
+  }
+  .img-frame img{width:100%; height:100%; object-fit:cover; transition:transform 1.2s ease;}
+  .img-frame:hover img{transform:scale(1.04);}
+  .img-tag{
+    position:absolute; bottom:14px; left:14px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:0.1em;
+    background:#07090acc;
+    padding:6px 10px;
+    border:1px solid var(--line);
+    color:var(--ice);
+  }
+
+  .subhead{
+    font-family:'Anton', sans-serif;
+    color:var(--red);
+    font-size:clamp(15px,1.6vw,18px);
+    letter-spacing:0.04em;
+    margin-bottom:14px;
+  }
+
+  /* ---------- Moodboard ---------- */
+  .mood-header{margin-bottom:46px; max-width:680px;}
+  .mood-meta{
+    display:flex; flex-wrap:wrap; gap:28px;
+    margin-top:26px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--grey);
+  }
+  .mood-meta b{color:var(--white); font-weight:500; display:block; font-size:11px; letter-spacing:0.1em; margin-bottom:6px; text-transform:uppercase;}
+  .mood-grid{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    grid-template-rows:repeat(2, 160px);
+    gap:8px;
+  }
+  .mood-grid .cell{
+    position:relative;
+    overflow:hidden;
+    border:1px solid var(--line);
+    cursor:default;
+  }
+  .mood-grid .cell img{width:100%; height:100%; object-fit:cover; transition:transform .6s ease, filter .6s ease; filter:saturate(1) brightness(.92);}
+  .mood-grid .cell:hover img{transform:scale(1.06); filter:saturate(1.15) brightness(1);}
+  .mood-grid .c1{grid-column:1/4; grid-row:1/2;}
+  .mood-grid .c2{grid-column:4/6; grid-row:1/2;}
+  .mood-grid .c3{grid-column:6/7; grid-row:1/3;}
+  .mood-grid .c4{grid-column:1/3; grid-row:2/3;}
+  .mood-grid .c5{grid-column:3/5; grid-row:2/3;}
+  .mood-grid .c6{grid-column:5/6; grid-row:2/3;}
+  .palette-row{
+    display:flex; gap:0;
+    margin-top:10px;
+    border:1px solid var(--line);
+  }
+  .swatch{
+    flex:1;
+    height:56px;
+    position:relative;
+    cursor:pointer;
+    display:flex; align-items:flex-end; justify-content:center;
+    transition:flex-grow .3s ease;
+  }
+  .swatch span{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:#00000099;
+    padding-bottom:6px;
+    opacity:0;
+    transition:opacity .2s;
+  }
+  .swatch:hover{flex-grow:1.6;}
+  .swatch:hover span{opacity:1;}
+  .toast{
+    position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--white); color:var(--black);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    padding:10px 16px;
+    border-radius:3px;
+    opacity:0;
+    transition:.3s;
+    z-index:200;
+    pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ---------- Narrativa ---------- */
+  .narrativa-grid{display:grid; grid-template-columns:0.95fr 1.05fr; gap:70px; align-items:start;}
+  .acts{position:relative; padding-left:34px;}
+  .acts::before{content:''; position:absolute; left:0; top:6px; bottom:6px; width:1px; background:var(--line);}
+  .act{position:relative; margin-bottom:54px;}
+  .act:last-child{margin-bottom:0;}
+  .act::before{
+    content:''; position:absolute; left:-34px; top:6px;
+    width:9px; height:9px; border-radius:50%;
+    background:var(--black); border:2px solid var(--ice);
+  }
+  .act.act-final::before{border-color:var(--red); background:var(--red);}
+  .act-roman{font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ice); letter-spacing:0.1em;}
+  .act h3{font-size:clamp(24px,3vw,34px); margin:8px 0 10px;}
+  .act p{color:#d8d6d0; font-size:17px; line-height:1.6; max-width:440px;}
+
+  /* ---------- Entregas ---------- */
+  .deliv-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    margin-top:40px;
+  }
+  .deliv-card{
+    background:var(--black);
+    padding:30px 26px;
+    transition:background .25s;
+  }
+  .deliv-card:hover{background:var(--black-2);}
+  .deliv-num{font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--red); letter-spacing:0.1em;}
+  .deliv-card h4{font-family:'Anton', sans-serif; font-size:19px; margin:10px 0 6px; text-transform:uppercase;}
+  .deliv-card p{font-size:14px; color:var(--grey); margin:0;}
+  .timeline-bar{
+    margin-top:46px;
+    display:flex; height:34px; border:1px solid var(--line); overflow:hidden;
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.06em;
+  }
+  .tl-seg{display:flex; align-items:center; justify-content:center; color:var(--black);}
+  .tl-prod{background:var(--red); flex:5;}
+  .tl-post{background:var(--ice); flex:10;}
+
+  /* ---------- Criadores ---------- */
+  .creators-grid{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line); border:1px solid var(--line); margin-top:40px;}
+  .creator-card{background:var(--black); padding:38px;}
+  .creator-photo{width:84px; height:84px; border-radius:50%; overflow:hidden; border:1px solid var(--line); margin-bottom:20px;}
+  .creator-photo img{width:100%; height:100%; object-fit:cover;}
+  .creator-card h4{font-size:26px; margin-bottom:4px;}
+  .creator-role{color:var(--red); font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:16px; display:block;}
+  .creator-card p{color:#d8d6d0; font-size:15px; line-height:1.6;}
+  .stat-strip{
+    display:flex; gap:40px; margin-top:40px; flex-wrap:wrap;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .stat-strip div b{display:block; font-family:'Anton', sans-serif; font-size:28px; color:var(--white);}
+  .stat-strip div span{font-size:11px; color:var(--grey); letter-spacing:0.05em;}
+  .case-link{
+    display:inline-flex; align-items:center; gap:10px; margin-top:18px;
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ice);
+    text-decoration:none; border-bottom:1px solid transparent;
+  }
+  .case-link:hover{border-color:var(--ice);}
+
+  /* ---------- Investimento ---------- */
+  .kit-list{margin-top:32px; border-top:1px solid var(--line);}
+  .kit-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:20px 0; border-bottom:1px solid var(--line);
+    font-size:18px;
+  }
+  .kit-row span:last-child{font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--grey); letter-spacing:0.04em;}
+  .invest-note{margin-top:30px; max-width:480px; color:#d8d6d0; font-size:15px; line-height:1.7;}
+  .invest-note strong{color:var(--white);}
+
+  /* ---------- CTA ---------- */
+  .cta{
+    background:radial-gradient(circle at 30% 20%, #1a2226 0%, #07090a 60%);
+    text-align:center;
+    justify-content:center;
+    flex-direction:column;
+  }
+  .cta-wrap{max-width:760px; margin:0 auto; text-align:center;}
+  .cta h2{font-size:clamp(44px,8vw,96px); line-height:0.95;}
+  .cta h2 .accent{color:var(--red);}
+  .cta p{color:var(--grey); margin-top:22px; font-size:16px; letter-spacing:0.04em;}
+  .cta-btn{
+    display:inline-flex; align-items:center; gap:12px;
+    margin-top:42px;
+    padding:18px 34px;
+    border:1px solid var(--white);
+    color:var(--white);
+    text-decoration:none;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px; letter-spacing:0.12em;
+    text-transform:uppercase;
+    transition:.25s;
+  }
+  .cta-btn:hover{background:var(--white); color:var(--black);}
+  .footer-tag{
+    margin-top:90px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--grey);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:14px;
+    border-top:1px solid var(--line);
+    padding-top:26px;
+  }
+  .footer-tag .rocket{color:var(--red);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:880px){
+    .rail{display:none;}
+    .top-bar{display:flex;}
+    main{margin-left:0;}
+    .section{padding:90px 24px 70px;}
+    .hero-content{padding:0 24px;}
+    .scroll-cue{left:24px;}
+    .two-col, .two-col.reverse{grid-template-columns:1fr; gap:36px;}
+    .two-col.reverse .img-cell{order:0;}
+    .narrativa-grid{grid-template-columns:1fr;}
+    .mood-grid{grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(4,140px);}
+    .mood-grid .c1,.mood-grid .c2,.mood-grid .c3,.mood-grid .c4,.mood-grid .c5,.mood-grid .c6{grid-column:auto; grid-row:auto;}
+    .deliv-grid{grid-template-columns:1fr 1fr;}
+    .creators-grid{grid-template-columns:1fr;}
+    .ghost-num{font-size:42vw; opacity:.6;}
+    .copy p{max-width:none;}
+  }
+  @media (max-width:520px){
+    .deliv-grid{grid-template-columns:1fr;}
+    .hero h1{font-size:20vw;}
+  }
+</style>
+</head>
+<body>
+
+  <!-- Latitude rail -->
+  <nav class="rail" aria-label="Progresso da jornada">
+    <div class="rail-top mono">BR → AR</div>
+    <div class="rail-track">
+      <div class="rail-fill" id="railFill"></div>
+      <div class="rail-dot" data-target="hero" style="top:0%"></div>
+      <div class="rail-dot" data-target="conceito" style="top:13%"></div>
+      <div class="rail-dot" data-target="motivo" style="top:26%"></div>
+      <div class="rail-dot" data-target="estetica" style="top:42%"></div>
+      <div class="rail-dot" data-target="narrativa" style="top:58%"></div>
+      <div class="rail-dot" data-target="entregas" style="top:73%"></div>
+      <div class="rail-dot" data-target="criadores" style="top:86%"></div>
+      <div class="rail-dot" data-target="investimento" style="top:97%"></div>
+    </div>
+    <div class="rail-coord mono" id="railCoord">54°48'S</div>
+    <div class="rail-bottom mono">FIM<br>DO<br>MUNDO</div>
+  </nav>
+
+  <!-- mobile progress bar -->
+  <div class="top-bar">
+    <span class="top-bar-coord mono" id="topCoord">34.6°S</span>
+    <div class="top-bar-track"><div class="top-bar-fill" id="topFill"></div></div>
+    <span class="top-bar-coord mono">54.8°S</span>
+  </div>
+
+  <main>
+
+    <!-- HERO -->
+    <section class="section hero" id="hero">
+      <!-- TROQUE A URL ABAIXO PELA SUA FOTO HERO DE USHUAIA -->
+      <div class="hero-bg" style="background-image:url('imgs/narrativa.jpg')"></div>
+      <div class="hero-gradient"></div>
+      <canvas id="snow"></canvas>
+      <div class="hero-content">
+        <div class="hero-eyebrow mono">PROPOSTA DE PRODUÇÃO</div>
+        <h1>USHUAIA</h1>
+        <div class="brand-row">THE NORTH FACE <span class="x">×</span> TAUMAXS</div>
+        <div class="hero-meta mono">ARGENTINA · AGOSTO 2026 · 54°48'S 68°18'W</div>
+      </div>
+      <div class="scroll-cue"><span class="arrow"></span> ROLE PARA EXPLORAR</div>
+    </section>
+
+    <!-- 01 CONCEITO -->
+    <section class="section chapter" id="conceito">
+      <div class="ghost-num">01</div>
+      <div class="wrap">
+        <div class="two-col">
+          <div class="copy reveal">
+            <div class="eyebrow">01 · THE CONCEPT</div>
+            <h2>O CONCEITO</h2>
+            <p>Dois brasileiros no fim do mundo. Uma produção cinematográfica em Ushuaia — <span class="hl-ice">o destino mais austral do planeta</span>. Onde o frio absoluto do fim do mundo encontra <span class="hl-red">o calor vibrante das cores</span>. Jaquetas vermelhas, laranjas e amarelas contra o azul e branco glacial da Patagônia.</p>
+            <p>Não é só uma campanha. É uma narrativa visual que conecta o produto à experiência real de quem não para.</p>
+            <div class="pull-quote">"NEVER STOP EXPLORING"</div>
+          </div>
+          <div class="img-cell reveal reveal-d2">
+            <!-- TROQUE PELA SUA FOTO DE CONCEITO/BASTIDORES -->
+            <div class="img-frame"><img src="imgs/conceito.jpg" alt="Casal em expedição, referência de produção"><span class="img-tag">REF · BASTIDORES</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 MOTIVO -->
+    <section class="section chapter" id="motivo">
+      <div class="ghost-num">02</div>
+      <div class="wrap">
+        <div class="two-col reverse">
+          <div class="img-cell reveal reveal-d2">
+            <!-- TROQUE PELO SEU CASE COMO FILMMAKER -->
+            <div class="img-frame"><img src="imgs/motivo.jpg" alt="Filmmaker em expedição"><span class="img-tag">REF · CASE TAUMAXS</span></div>
+          </div>
+          <div class="copy reveal">
+            <div class="eyebrow">02 · THE REASON</div>
+            <h2>O MOTIVO</h2>
+            <div class="subhead">CONTEÚDO É A BASE</div>
+            <p>Vídeo é o combustível das redes sociais hoje. Com uma veia criativa e um olhar cinematográfico, o conteúdo produzido em Ushuaia vai além da campanha.</p>
+            <p>Vai gerar material de longo prazo para ambas as partes, com credibilidade e estética cinematográfica.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 ESTÉTICA / MOODBOARD -->
+    <section class="section chapter" id="estetica">
+      <div class="wrap">
+        <div class="mood-header reveal">
+          <div class="eyebrow">03 · MOODBOARD</div>
+          <h2>PROPOSTA ESTÉTICA</h2>
+          <div class="mood-meta">
+            <div><b>Direção Criativa</b>Cinematic Expedition</div>
+            <div><b>Vibe</b>Silêncio imersivo, contraste extremo, performance técnica</div>
+          </div>
+        </div>
+
+        <!-- TROQUE CADA URL PELA SUA REFERÊNCIA VISUAL -->
+        <div class="mood-grid reveal reveal-d1">
+          <div class="cell c1"><img src="imgs/mood1.jpg" alt="Mountains, red jacket"></div>
+          <div class="cell c2"><img src="imgs/mood2.jpg" alt="Snowy valley"></div>
+          <div class="cell c3"><img src="imgs/mood5.jpg" alt="Yellow jacket detail"></div>
+          <div class="cell c4"><img src="imgs/mood3.jpg" alt="Lakeside back view"></div>
+          <div class="cell c5"><img src="imgs/mood4.jpg" alt="Portrait in snow"></div>
+          <div class="cell c6"><img src="imgs/mood6.jpg" alt="Frosted trees aerial"></div>
+        </div>
+
+        <div class="palette-row reveal reveal-d2">
+          <div class="swatch" style="background:#e63a23" data-hex="#E63A23"><span>TNF RED</span></div>
+          <div class="swatch" style="background:#6fa3c4" data-hex="#6FA3C4"><span>GLACIAL BLUE</span></div>
+          <div class="swatch" style="background:#f0b400" data-hex="#F0B400"><span>SOLAR YELLOW</span></div>
+          <div class="swatch" style="background:#07090a; border-right:none" data-hex="#07090A"><span style="color:#fff">DEEP BLACK</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 NARRATIVA -->
+    <section class="section chapter" id="narrativa">
+      <div class="ghost-num">04</div>
+      <div class="wrap">
+        <div class="eyebrow reveal">04 · THE STORY</div>
+        <h2 class="reveal" style="margin-bottom:50px;">A NARRATIVA</h2>
+        <div class="narrativa-grid">
+          <div class="acts">
+            <div class="act reveal">
+              <div class="act-roman">I.</div>
+              <h3>A CHEGADA</h3>
+              <p>O primeiro contato com o frio extremo. A jaqueta sendo vestida. O silêncio do desconhecido.</p>
+            </div>
+            <div class="act reveal reveal-d1">
+              <div class="act-roman">II.</div>
+              <h3>A IMERSÃO</h3>
+              <p>Glaciares, neve, vento. O produto em ação. Cores quentes contra o azul absoluto da Patagônia.</p>
+            </div>
+            <div class="act act-final reveal reveal-d2">
+              <div class="act-roman">III.</div>
+              <h3>O MOMENTO</h3>
+              <p>Quietude. O casal no fim do mundo. Onde o frio de fora não alcança o calor de dentro.</p>
+            </div>
+          </div>
+          <div class="img-cell reveal reveal-d2">
+            <!-- TROQUE PELA FOTO DE USHUAIA DA SUA ESCOLHA -->
+            <div class="img-frame"><img src="imgs/narrativa.jpg" alt="Vista de Ushuaia na neve"><span class="img-tag">USHUAIA · ARGENTINA</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 ENTREGAS -->
+    <section class="section chapter" id="entregas">
+      <div class="ghost-num">05</div>
+      <div class="wrap">
+        <div class="two-col">
+          <div class="copy">
+            <div class="eyebrow reveal">05 · THE DELIVERABLES</div>
+            <h2 class="reveal">AS ENTREGAS</h2>
+            <div class="deliv-grid reveal reveal-d1">
+              <div class="deliv-card"><div class="deliv-num">01</div><h4>Vídeo Principal</h4><p>60 segundos · 16:9 + 9:16</p></div>
+              <div class="deliv-card"><div class="deliv-num">02</div><h4>Reels Curtos</h4><p>15–30 segundos · 9:16</p></div>
+              <div class="deliv-card"><div class="deliv-num">03</div><h4>20 Fotos</h4><p>Alta resolução · uso irrestrito</p></div>
+              <div class="deliv-card"><div class="deliv-num">04</div><h4>Stories / Dia</h4><p>Durante os 5 dias de produção</p></div>
+              <div class="deliv-card"><div class="deliv-num">05</div><h4>Menções &amp; Tags</h4><p>Em todos os conteúdos publicados</p></div>
+              <div class="deliv-card"><div class="deliv-num">06</div><h4>Uso Orgânico</h4><p>Peças usadas continuamente nas redes</p></div>
+            </div>
+            <div class="timeline-bar reveal reveal-d2">
+              <div class="tl-seg tl-prod">PRODUÇÃO · 5 DIAS</div>
+              <div class="tl-seg tl-post">PÓS-PRODUÇÃO · 10 DIAS ÚTEIS</div>
+            </div>
+          </div>
+          <div class="img-cell reveal reveal-d2">
+            <!-- TROQUE POR FOTO DE DIREÇÃO DE ARTE / CÂMERA -->
+            <div class="img-frame"><img src="imgs/entregas.jpg" alt="Direção de arte e styling"><span class="img-tag">DIREÇÃO DE ARTE</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 CRIADORES -->
+    <section class="section chapter" id="criadores">
+      <div class="ghost-num">06</div>
+      <div class="wrap">
+        <div class="eyebrow reveal">06 · THE CREATORS</div>
+        <h2 class="reveal" style="margin-bottom:0;">OS CRIADORES</h2>
+
+        <div class="creators-grid reveal reveal-d1">
+          <div class="creator-card">
+            <!-- TROQUE PELA SUA FOTO DE PERFIL -->
+            <div class="creator-photo"><img src="imgs/taumaxs.jpg" alt="Taumaxs"></div>
+            <h4>TAUMAXS</h4>
+            <span class="creator-role">Filmmaker &amp; Fotógrafo</span>
+            <p>Especialista em narrativa visual cinematográfica. Transforma vivências reais em histórias potentes.</p>
+            <a class="case-link" href="https://www.instagram.com/taumaxs" target="_blank" rel="noopener">INSTAGRAM: @TAUMAXS →</a>
+          </div>
+          <div class="creator-card">
+            <!-- TROQUE PELA FOTO DA NYCK -->
+            <div class="creator-photo"><img src="imgs/nyck.jpg" alt="Nyck"></div>
+            <h4>NYCK</h4>
+            <span class="creator-role">Modelo &amp; Direção de Arte</span>
+            <p>Responsável pela curadoria estética e presença em cena, garantindo a identidade visual da expedição.</p>
+          </div>
+        </div>
+
+        <div class="stat-strip reveal reveal-d2">
+          <div><b>16,8 mil</b><span>SEGUIDORES</span></div>
+          <div><b>823</b><span>POSTS</span></div>
+          <div><b>380,9 mil</b><span>VISUALIZAÇÕES / 30 DIAS</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 INVESTIMENTO -->
+    <section class="section chapter" id="investimento">
+      <div class="ghost-num">07</div>
+      <div class="wrap">
+        <div class="two-col reverse">
+          <div class="img-cell reveal reveal-d2">
+            <!-- TROQUE POR FOTO DE EQUIPAMENTO / GEAR -->
+            <div class="img-frame"><img src="imgs/invest.jpg" alt="Equipamento técnico na neve"><span class="img-tag">KIT TÉCNICO</span></div>
+          </div>
+          <div class="copy reveal">
+            <div class="eyebrow">07 · THE INVESTMENT</div>
+            <h2>O INVESTIMENTO</h2>
+            <div class="subhead">KIT DE PRODUÇÃO</div>
+            <div class="kit-list">
+              <div class="kit-row"><span>02 Jaquetas <small style="color:var(--grey)">(Taumaxs &amp; Nyck)</small></span><span>CORES A DEFINIR</span></div>
+              <div class="kit-row"><span>02 Segundas peles térmicas</span><span>CONJUNTO COMPLETO</span></div>
+              <div class="kit-row"><span>02 Gorros</span><span>ACESSÓRIOS · CORES A DEFINIR</span></div>
+            </div>
+            <p class="invest-note">Para garantir a qualidade cinematográfica e a autenticidade do conteúdo, as peças da coleção serão utilizadas ao longo de toda a produção. <strong>O valor de cachê será apresentado mediante contato</strong>, de acordo com o escopo final da parceria.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section cta" id="cta">
+      <div class="cta-wrap reveal">
+        <h2>VAMOS CRIAR<br><span class="accent">ALGO INCRÍVEL</span></h2>
+        <p class="mono">PROPOSTA DE PRODUÇÃO · USHUAIA, AGOSTO 2026<br>THE NORTH FACE × TAUMAXS</p>
+        <a class="cta-btn" href="https://www.instagram.com/taumaxs" target="_blank" rel="noopener">FALAR COM TAUMAXS →</a>
+        <div class="footer-tag">
+          <span><span class="rocket">🚀</span> DEFY GRAVITY — AQUI O FOGUETE SOBE DE RÉ</span>
+          <span>@TAUMAXS</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast">Copiado</div>
+
+<script>
+  // ---- Reveal on scroll ----
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); } });
+  }, {threshold:0.15});
+  revealEls.forEach(el=>io.observe(el));
+
+  // ---- Latitude rail progress ----
+  const railFill = document.getElementById('railFill');
+  const railCoord = document.getElementById('railCoord');
+  const topFill = document.getElementById('topFill');
+  const topCoord = document.getElementById('topCoord');
+  const dots = document.querySelectorAll('.rail-dot');
+  const sections = document.querySelectorAll('main .section');
+  const LAT_START = 34.6, LAT_END = 54.8;
+
+  function updateRail(){
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const scrollH = doc.scrollHeight - doc.clientHeight;
+    const frac = Math.min(1, Math.max(0, scrollTop / scrollH));
+    railFill.style.height = (frac*100)+'%';
+    topFill.style.width = (frac*100)+'%';
+    const lat = (LAT_START + frac*(LAT_END-LAT_START)).toFixed(1);
+    railCoord.textContent = lat+"°S";
+    topCoord.textContent = lat+"°S";
+
+    let current = sections[0];
+    sections.forEach(s=>{
+      const r = s.getBoundingClientRect();
+      if(r.top <= window.innerHeight*0.5) current = s;
+    });
+    dots.forEach(d=> d.classList.toggle('active', d.dataset.target === current.id));
+  }
+  window.addEventListener('scroll', updateRail, {passive:true});
+  window.addEventListener('resize', updateRail);
+  updateRail();
+
+  dots.forEach(d=>{
+    d.addEventListener('click', ()=>{
+      const el = document.getElementById(d.dataset.target);
+      if(el) el.scrollIntoView({behavior:'smooth'});
+    });
+  });
+
+  // ---- Palette swatch copy ----
+  const toast = document.getElementById('toast');
+  document.querySelectorAll('.swatch').forEach(sw=>{
+    sw.addEventListener('click', ()=>{
+      const hex = sw.dataset.hex;
+      navigator.clipboard?.writeText(hex).catch(()=>{});
+      toast.textContent = hex+' copiado';
+      toast.classList.add('show');
+      setTimeout(()=>toast.classList.remove('show'), 1400);
+    });
+  });
+
+  // ---- Snow canvas (hero only) ----
+  const canvas = document.getElementById('snow');
+  const ctx = canvas.getContext('2d');
+  let flakes = [];
+  function sizeCanvas(){
+    const hero = document.getElementById('hero');
+    canvas.width = hero.clientWidth;
+    canvas.height = hero.clientHeight;
+  }
+  function initFlakes(){
+    flakes = Array.from({length:70}, ()=>({
+      x: Math.random()*canvas.width,
+      y: Math.random()*canvas.height,
+      r: Math.random()*2+0.6,
+      s: Math.random()*0.6+0.2,
+      drift: Math.random()*0.6-0.3
+    }));
+  }
+  let snowRunning = true;
+  function drawSnow(){
+    if(!snowRunning) return;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    flakes.forEach(f=>{
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, f.r, 0, Math.PI*2);
+      ctx.fill();
+      f.y += f.s;
+      f.x += f.drift;
+      if(f.y > canvas.height){ f.y = -4; f.x = Math.random()*canvas.width; }
+    });
+    requestAnimationFrame(drawSnow);
+  }
+  sizeCanvas(); initFlakes(); drawSnow();
+  window.addEventListener('resize', ()=>{ sizeCanvas(); });
+  const heroObserver = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      snowRunning = e.isIntersecting;
+      if(snowRunning) drawSnow();
+    });
+  }, {threshold:0});
+  heroObserver.observe(document.getElementById('hero'));
+</script>
+</body>
+</html>
